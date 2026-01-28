@@ -2,6 +2,8 @@
 
 تطبيق ويب تقدمي (PWA) لتحويل ملفات PDF إلى فيديو MP4 مع إمكانية إضافة صوت.
 
+[![Deploy to GitHub Pages](https://github.com/snaya-sa/PdfToMp4/actions/workflows/deploy.yml/badge.svg)](https://github.com/snaya-sa/PdfToMp4/actions/workflows/deploy.yml)
+
 ## المميزات
 
 - **يعمل بدون إنترنت** - بعد الزيارة الأولى، يعمل التطبيق بالكامل بدون اتصال
