@@ -1,0 +1,25 @@
+{
+  "name": "pdf-to-mp4",
+  "version": "1.0.0",
+  "description": "محول PDF إلى فيديو MP4 - يعمل بدون إنترنت",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:44344/git/snaya-sa/PdfToMp4"
+  },
+  "keywords": ["pdf", "mp4", "converter", "pwa", "arabic"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "pdfjs-dist": "^5.4.530",
+    "vite": "^7.3.1",
+    "vite-plugin-pwa": "^1.2.0"
+  }
+}
