@@ -43,11 +43,19 @@ export class VideoEncoder {
    * @param {number} options.fps - Frames per second
    * @param {number} options.width - Output width (will be made even)
    * @param {number} options.height - Output height (will be made even)
+   * @param {number} options.repeatCount - Number of times to repeat the full image sequence
    * @param {function} onProgress - Progress callback
    * @returns {Promise<Blob>} - The video blob
    */
   async createVideoFromImages(imageBlobs, options, onProgress = null) {
-    const { duration = 3, fps = 30, width = 1280, height = 720 } = options;
+    const {
+      duration = 3,
+      fps = 30,
+      width = 1280,
+      height = 720,
+      repeatCount = 1
+    } = options;
+    const safeRepeatCount = Math.min(100, Math.max(1, Math.floor(repeatCount)));
 
     // Ensure dimensions are even (required by h264)
     const evenWidth = width % 2 === 0 ? width : width + 1;
@@ -63,19 +71,36 @@ export class VideoEncoder {
       }
     }
 
-    // Create video from images
-    // Using -framerate to set input framerate (1/duration = images per second)
-    const inputFramerate = 1 / duration;
+    // Build a concat timeline that can reuse the same image files. This keeps
+    // memory use stable even when the whole presentation is repeated many times.
+    const concatLines = [];
+    for (let repeat = 0; repeat < safeRepeatCount; repeat++) {
+      for (let i = 0; i < imageBlobs.length; i++) {
+        concatLines.push(`file 'img${String(i).padStart(4, '0')}.png'`);
+        concatLines.push(`duration ${duration}`);
+      }
+    }
+    // The concat demuxer needs the final image repeated to apply its duration.
+    concatLines.push(`file 'img${String(imageBlobs.length - 1).padStart(4, '0')}.png'`);
+    await this.ffmpeg.writeFile(
+      'slides.txt',
+      new TextEncoder().encode(concatLines.join('\n'))
+    );
+
+    const totalDuration = imageBlobs.length * safeRepeatCount * duration;
 
     await this.ffmpeg.exec([
-      '-framerate', String(inputFramerate),
-      '-i', 'img%04d.png',
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', 'slides.txt',
       '-c:v', 'libx264',
       '-pix_fmt', 'yuv420p',
       '-vf', `scale=${evenWidth}:${evenHeight}:force_original_aspect_ratio=decrease,pad=${evenWidth}:${evenHeight}:(ow-iw)/2:(oh-ih)/2:white`,
       '-r', String(fps),
+      '-t', String(totalDuration),
       '-preset', 'fast',
       '-crf', '23',
+      '-movflags', '+faststart',
       'video_no_audio.mp4'
     ]);
 
@@ -91,6 +116,8 @@ export class VideoEncoder {
       const fileName = `img${String(i).padStart(4, '0')}.png`;
       await this.ffmpeg.deleteFile(fileName);
     }
+    await this.ffmpeg.deleteFile('slides.txt');
+    await this.ffmpeg.deleteFile('video_no_audio.mp4');
 
     return new Blob([videoData.buffer], { type: 'video/mp4' });
   }

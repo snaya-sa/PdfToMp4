@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { mediaAudioPlugin } from './server/media-audio-plugin.js';
 
 export default defineConfig({
   base: '/',
   plugins: [
+    mediaAudioPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png'],

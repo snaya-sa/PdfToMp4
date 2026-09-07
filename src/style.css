@@ -185,6 +185,117 @@ body {
   font-size: 0.875rem !important;
 }
 
+/* Audio source */
+.source-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0.35rem;
+  margin-bottom: 1rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.source-tab {
+  min-height: 42px;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.source-tab.active {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.25);
+}
+
+.media-link-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.media-link-form > label {
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.media-link-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+}
+
+.media-link-row input {
+  min-width: 0;
+  padding: 0.75rem 0.9rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+}
+
+.media-link-row input::placeholder {
+  color: var(--text-muted);
+}
+
+.btn-fetch-audio {
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent-light);
+  color: var(--accent-hover);
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn-fetch-audio:hover:not(:disabled) {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-fetch-audio:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.source-note,
+.link-status {
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+
+.source-note {
+  color: var(--text-muted);
+}
+
+.link-status {
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent-light);
+  color: var(--accent-hover);
+}
+
+.link-status.error {
+  background: var(--error-light);
+  color: var(--error);
+}
+
 /* File Info */
 .file-info {
   display: flex;
@@ -345,6 +456,29 @@ body {
 .setting-hint {
   color: var(--text-muted);
   font-size: 0.8125rem;
+}
+
+.timeline-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: var(--radius-sm);
+  background: var(--accent-light);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.timeline-summary strong {
+  color: var(--text-primary);
+}
+
+.timeline-summary span {
+  color: var(--accent-hover);
+  white-space: nowrap;
 }
 
 .input-with-btns {
@@ -614,6 +748,16 @@ select:focus {
 
   .progress-steps {
     grid-template-columns: 1fr;
+  }
+
+  .media-link-row {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   .download-info {

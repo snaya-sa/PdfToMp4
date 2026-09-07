@@ -8,6 +8,7 @@ const state = {
   pdfRenderer: null,
   audioFile: null,
   audioDuration: null,
+  audioSource: 'file',
   thumbnails: [],
   videoBlob: null,
   isProcessing: false
@@ -32,6 +33,14 @@ const elements = {
   audioInfo: document.getElementById('audio-info'),
   audioOptions: document.getElementById('audio-options'),
   removeAudio: document.getElementById('remove-audio'),
+  audioSourceTabs: document.getElementById('audio-source-tabs'),
+  audioSourceButtons: document.querySelectorAll('[data-audio-source]'),
+  audioFilePanel: document.getElementById('audio-file-panel'),
+  audioLinkPanel: document.getElementById('audio-link-panel'),
+  audioLinkForm: document.getElementById('audio-link-form'),
+  audioUrl: document.getElementById('audio-url'),
+  fetchAudioBtn: document.getElementById('fetch-audio-btn'),
+  audioLinkStatus: document.getElementById('audio-link-status'),
   loopAudio: document.getElementById('loop-audio'),
   volume: document.getElementById('volume'),
   volumeValue: document.getElementById('volume-value'),
@@ -40,8 +49,12 @@ const elements = {
   duration: document.getElementById('duration'),
   durationMinus: document.getElementById('duration-minus'),
   durationPlus: document.getElementById('duration-plus'),
+  repeatCount: document.getElementById('repeat-count'),
+  repeatMinus: document.getElementById('repeat-minus'),
+  repeatPlus: document.getElementById('repeat-plus'),
   autoDuration: document.getElementById('auto-duration'),
   autoDurationHint: document.getElementById('auto-duration-hint'),
+  timelineSummary: document.getElementById('timeline-summary'),
   quality: document.getElementById('quality'),
   fps: document.getElementById('fps'),
 
@@ -141,9 +154,48 @@ function updateAutoDurationHint() {
   }
 
   const pageCount = state.pdfRenderer.pageCount;
-  const durationPerPage = state.audioDuration / pageCount;
+  const repeatCount = getRepeatCount();
+  const sceneCount = pageCount * repeatCount;
+  const durationPerPage = state.audioDuration / sceneCount;
   elements.autoDurationHint.textContent =
-    `${toArabicNumbers(pageCount)} صفحات ÷ ${formatDuration(state.audioDuration)} = ${toArabicNumbers(durationPerPage.toFixed(1))} ثانية/صفحة`;
+    `${formatDuration(state.audioDuration)} ÷ ${toArabicNumbers(sceneCount)} مشهدًا = ${toArabicNumbers(durationPerPage.toFixed(1))} ثانية/صفحة`;
+}
+
+function getRepeatCount() {
+  const value = parseInt(elements.repeatCount.value, 10);
+  return Number.isFinite(value) ? Math.min(100, Math.max(1, value)) : 1;
+}
+
+function getDurationPerPage() {
+  if (elements.autoDuration.checked && state.audioDuration && state.pdfRenderer) {
+    return state.audioDuration / (state.pdfRenderer.pageCount * getRepeatCount());
+  }
+
+  const value = parseFloat(elements.duration.value);
+  return Number.isFinite(value) ? Math.min(60, Math.max(1, value)) : 3;
+}
+
+function updateTimelineSummary() {
+  if (!state.pdfRenderer) {
+    elements.timelineSummary.textContent = 'اختر ملف PDF لعرض المدة الإجمالية.';
+    return;
+  }
+
+  const pageCount = state.pdfRenderer.pageCount;
+  const repeatCount = getRepeatCount();
+  const sceneCount = pageCount * repeatCount;
+  const totalDuration = getDurationPerPage() * sceneCount;
+
+  elements.timelineSummary.innerHTML = `
+    <strong>${toArabicNumbers(pageCount)} صفحات × ${toArabicNumbers(repeatCount)} مرات = ${toArabicNumbers(sceneCount)} مشهدًا</strong>
+    <span>المدة المتوقعة: ${formatDuration(totalDuration)}</span>
+  `;
+}
+
+function syncTimingUI() {
+  elements.repeatCount.value = getRepeatCount();
+  updateAutoDurationHint();
+  updateTimelineSummary();
 }
 
 // PDF Handling
@@ -187,7 +239,7 @@ async function handlePDFFile(file) {
     });
 
     updateConvertButton();
-    updateAutoDurationHint();
+    syncTimingUI();
 
   } catch (error) {
     console.error('Error loading PDF:', error);
@@ -211,11 +263,36 @@ function removePDF() {
   elements.pdfInput.value = '';
 
   updateConvertButton();
-  updateAutoDurationHint();
+  syncTimingUI();
 }
 
 // Audio Handling
-async function handleAudioFile(file) {
+function switchAudioSource(source) {
+  if (state.audioFile || !['file', 'link'].includes(source)) return;
+
+  state.audioSource = source;
+  elements.audioSourceButtons.forEach((button) => {
+    const isActive = button.dataset.audioSource === source;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-selected', String(isActive));
+  });
+  elements.audioFilePanel.classList.toggle('hidden', source !== 'file');
+  elements.audioLinkPanel.classList.toggle('hidden', source !== 'link');
+}
+
+function setAudioLinkStatus(message = '', type = '') {
+  elements.audioLinkStatus.textContent = message;
+  elements.audioLinkStatus.className = `link-status${message ? '' : ' hidden'}${type ? ` ${type}` : ''}`;
+}
+
+function setAudioLoading(isLoading) {
+  elements.fetchAudioBtn.disabled = isLoading;
+  elements.audioUrl.disabled = isLoading;
+  elements.fetchAudioBtn.classList.toggle('loading', isLoading);
+  elements.fetchAudioBtn.textContent = isLoading ? 'جاري الاستخراج...' : 'استخراج الصوت';
+}
+
+async function handleAudioFile(file, { source = 'file', sourceLabel = '' } = {}) {
   if (!file) return;
 
   const isAudio = file.type.startsWith('audio/');
@@ -227,6 +304,7 @@ async function handleAudioFile(file) {
   }
 
   state.audioFile = file;
+  state.audioSource = source;
 
   try {
     const encoder = new VideoEncoder();
@@ -235,18 +313,70 @@ async function handleAudioFile(file) {
     // Update UI
     elements.audioInfo.classList.remove('hidden');
     elements.audioOptions.classList.remove('hidden');
-    elements.audioInfo.querySelector('.file-name').textContent = file.name;
+    elements.audioInfo.querySelector('.file-name').textContent = sourceLabel || file.name;
     elements.audioInfo.querySelector('.file-duration').textContent = formatDuration(state.audioDuration);
-    elements.audioDropZone.classList.add('hidden');
+    elements.audioSourceTabs.classList.add('hidden');
+    elements.audioFilePanel.classList.add('hidden');
+    elements.audioLinkPanel.classList.add('hidden');
 
     // Enable auto-duration option
     elements.autoDuration.disabled = false;
-    updateAutoDurationHint();
+    syncTimingUI();
 
   } catch (error) {
     console.error('Error loading audio:', error);
     alert('حدث خطأ أثناء تحميل الملف الصوتي');
     removeAudio();
+  }
+}
+
+async function handleAudioUrl(event) {
+  event.preventDefault();
+
+  let url;
+  try {
+    url = new URL(elements.audioUrl.value.trim());
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
+  } catch {
+    setAudioLinkStatus('أدخل رابطًا صحيحًا يبدأ بـ http أو https.', 'error');
+    return;
+  }
+
+  setAudioLoading(true);
+  setAudioLinkStatus('جاري جلب المقطع واستخراج الصوت. قد يستغرق ذلك لحظات...', 'loading');
+
+  try {
+    const response = await fetch('/api/media-audio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'audio/*, application/json' },
+      body: JSON.stringify({ url: url.href })
+    });
+
+    if (!response.ok) {
+      const details = await response.json().catch(() => ({}));
+      throw new Error(details.message || 'تعذر استخراج الصوت من هذا الرابط.');
+    }
+
+    const audioBlob = await response.blob();
+    if (!audioBlob.size) throw new Error('لم يُرجع الرابط ملفًا صوتيًا صالحًا.');
+
+    const encodedName = response.headers.get('X-Media-Filename');
+    const fileName = encodedName ? decodeURIComponent(encodedName) : 'audio-from-link.m4a';
+    const audioFile = new File([audioBlob], fileName, {
+      type: audioBlob.type || 'audio/mp4',
+      lastModified: Date.now()
+    });
+
+    await handleAudioFile(audioFile, {
+      source: 'link',
+      sourceLabel: `صوت من ${url.hostname.replace(/^www\./, '')}`
+    });
+    setAudioLinkStatus('', '');
+  } catch (error) {
+    console.error('Error fetching audio URL:', error);
+    setAudioLinkStatus(error.message || 'تعذر استخراج الصوت من الرابط.', 'error');
+  } finally {
+    setAudioLoading(false);
   }
 }
 
@@ -256,11 +386,16 @@ function removeAudio() {
 
   elements.audioInfo.classList.add('hidden');
   elements.audioOptions.classList.add('hidden');
-  elements.audioDropZone.classList.remove('hidden');
+  elements.audioSourceTabs.classList.remove('hidden');
   elements.audioInput.value = '';
+  elements.audioUrl.value = '';
+  setAudioLinkStatus('', '');
   elements.autoDuration.checked = false;
   elements.autoDuration.disabled = true;
   elements.autoDurationHint.textContent = '';
+  elements.duration.disabled = false;
+  switchAudioSource(state.audioSource);
+  syncTimingUI();
 }
 
 // Drag and Drop
@@ -325,10 +460,8 @@ async function startConversion() {
     setProgress(50, 'تم تحويل الصفحات');
 
     // Calculate duration
-    let duration = parseFloat(elements.duration.value);
-    if (elements.autoDuration.checked && state.audioDuration) {
-      duration = state.audioDuration / state.pdfRenderer.pageCount;
-    }
+    const duration = getDurationPerPage();
+    const repeatCount = getRepeatCount();
 
     // Step 3: Create video
     setStepStatus('step-encode', 'active');
@@ -338,7 +471,8 @@ async function startConversion() {
       duration: duration,
       fps: parseInt(elements.fps.value),
       width: quality.width,
-      height: quality.height
+      height: quality.height,
+      repeatCount
     }, (text, percent) => {
       setProgress(50 + percent * 0.3, text);
     });
@@ -409,10 +543,12 @@ function resetApp() {
   removeAudio();
   showSection(null);
   elements.duration.value = 3;
+  elements.repeatCount.value = 1;
   elements.quality.value = 'medium';
   elements.fps.value = '30';
   elements.volume.value = 100;
   elements.volumeValue.textContent = '١٠٠٪';
+  syncTimingUI();
 }
 
 // Event Listeners
@@ -424,20 +560,43 @@ function initEventListeners() {
   // Audio drop zone
   setupDropZone(elements.audioDropZone, elements.audioInput, handleAudioFile);
   elements.removeAudio.addEventListener('click', removeAudio);
+  elements.audioSourceButtons.forEach((button) => {
+    button.addEventListener('click', () => switchAudioSource(button.dataset.audioSource));
+  });
+  elements.audioLinkForm.addEventListener('submit', handleAudioUrl);
 
   // Duration controls
   elements.durationMinus.addEventListener('click', () => {
     const current = parseInt(elements.duration.value);
     if (current > 1) elements.duration.value = current - 1;
+    syncTimingUI();
   });
 
   elements.durationPlus.addEventListener('click', () => {
     const current = parseInt(elements.duration.value);
     if (current < 60) elements.duration.value = current + 1;
+    syncTimingUI();
   });
+
+  elements.duration.addEventListener('input', syncTimingUI);
+
+  // Repeat controls
+  elements.repeatMinus.addEventListener('click', () => {
+    elements.repeatCount.value = Math.max(1, getRepeatCount() - 1);
+    syncTimingUI();
+  });
+
+  elements.repeatPlus.addEventListener('click', () => {
+    elements.repeatCount.value = Math.min(100, getRepeatCount() + 1);
+    syncTimingUI();
+  });
+
+  elements.repeatCount.addEventListener('input', syncTimingUI);
+  elements.repeatCount.addEventListener('change', syncTimingUI);
 
   elements.autoDuration.addEventListener('change', () => {
     elements.duration.disabled = elements.autoDuration.checked;
+    syncTimingUI();
   });
 
   // Volume control
@@ -475,6 +634,8 @@ function init() {
   initEventListeners();
   checkPWAStatus();
   updateConvertButton();
+  switchAudioSource('file');
+  syncTimingUI();
 }
 
 // Start app

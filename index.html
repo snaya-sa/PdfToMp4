@@ -60,23 +60,46 @@
         <div class="preview-grid" id="preview-grid"></div>
       </section>
 
-      <!-- Step 2: Audio Upload -->
+      <!-- Step 2: Audio -->
       <section class="card" id="audio-section">
         <div class="card-header">
           <span class="step-number">٢</span>
           <h2>الصوت (اختياري)</h2>
         </div>
-        <div class="drop-zone drop-zone-small" id="audio-drop-zone">
-          <div class="drop-zone-content">
-            <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 18V5l12-2v13"/>
-              <circle cx="6" cy="18" r="3"/>
-              <circle cx="18" cy="16" r="3"/>
-            </svg>
-            <p>اسحب ملف صوت أو فيديو</p>
-            <p class="drop-hint">MP3, WAV, MP4, WebM...</p>
+        <div class="source-tabs" id="audio-source-tabs" role="tablist" aria-label="مصدر الصوت">
+          <button class="source-tab active" type="button" role="tab" aria-selected="true" data-audio-source="file">
+            ملف من الجهاز
+          </button>
+          <button class="source-tab" type="button" role="tab" aria-selected="false" data-audio-source="link">
+            رابط مقطع
+          </button>
+        </div>
+
+        <div class="source-panel" id="audio-file-panel" role="tabpanel">
+          <div class="drop-zone drop-zone-small" id="audio-drop-zone">
+            <div class="drop-zone-content">
+              <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18V5l12-2v13"/>
+                <circle cx="6" cy="18" r="3"/>
+                <circle cx="18" cy="16" r="3"/>
+              </svg>
+              <p>اسحب ملف صوت أو فيديو</p>
+              <p class="drop-hint">MP3, WAV, MP4, WebM...</p>
+            </div>
+            <input type="file" id="audio-input" accept="audio/*,video/*" hidden />
           </div>
-          <input type="file" id="audio-input" accept="audio/*,video/*" hidden />
+        </div>
+
+        <div class="source-panel hidden" id="audio-link-panel" role="tabpanel">
+          <form class="media-link-form" id="audio-link-form">
+            <label for="audio-url">رابط المقطع</label>
+            <div class="media-link-row">
+              <input id="audio-url" type="url" inputmode="url" dir="ltr" placeholder="https://youtube.com/watch?v=..." autocomplete="off" />
+              <button class="btn-fetch-audio" id="fetch-audio-btn" type="submit">استخراج الصوت</button>
+            </div>
+            <p class="source-note">يدعم الروابط العامة من YouTube وTikTok وX وInstagram وغيرها. استخدم فقط محتوى تملكه أو لديك إذن لاستخدامه.</p>
+            <p class="link-status hidden" id="audio-link-status" role="status" aria-live="polite"></p>
+          </form>
         </div>
         <div id="audio-info" class="file-info hidden">
           <span class="file-name"></span>
@@ -111,6 +134,15 @@
               <button class="btn-adjust" id="duration-plus">+</button>
             </div>
           </div>
+          <div class="setting-item repeat-setting">
+            <label for="repeat-count">عدد مرات تكرار العرض</label>
+            <div class="input-with-btns">
+              <button class="btn-adjust" id="repeat-minus" type="button" aria-label="تقليل عدد مرات التكرار">−</button>
+              <input type="number" id="repeat-count" min="1" max="100" value="1" />
+              <button class="btn-adjust" id="repeat-plus" type="button" aria-label="زيادة عدد مرات التكرار">+</button>
+            </div>
+            <p class="setting-hint">بعد آخر صفحة يبدأ العرض مجددًا من الصفحة الأولى.</p>
+          </div>
           <div class="setting-item">
             <label>
               <input type="checkbox" id="auto-duration" />
@@ -134,6 +166,9 @@
               <option value="60">60 fps</option>
             </select>
           </div>
+        </div>
+        <div class="timeline-summary" id="timeline-summary" aria-live="polite">
+          اختر ملف PDF لعرض المدة الإجمالية.
         </div>
       </section>
 
@@ -220,7 +255,7 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <p>جميع العمليات تتم على جهازك - ملفاتك آمنة ولا يتم رفعها</p>
+      <p>ملف PDF والتحويل يبقيان على جهازك. عند استخدام رابط، يُجلب الصوت من المصدر المختار.</p>
     </footer>
   </div>
 
